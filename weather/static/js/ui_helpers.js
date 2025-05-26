@@ -75,94 +75,69 @@ function hideProgressBar() {
     }
 }
 
+// UI Helper functions
+
 // Function to ensure all UI elements exist
 function ensureUIElementsExist() {
-    // Check for forecast cards container
-    let forecastCards = document.getElementById('forecast-cards');
-    if (!forecastCards) {
-        console.warn('Forecast cards container not found, creating one');
-        const forecastContent = document.querySelector('.forecast-content');
-        if (forecastContent) {
-            forecastCards = document.createElement('div');
-            forecastCards.id = 'forecast-cards';
-            forecastCards.className = 'forecast-cards';
+    // Ensure chart containers exist
+    const chartContainers = ['temperature-chart', 'precipitation-chart', 'wind-chart'];
+    
+    chartContainers.forEach(id => {
+        if (!document.getElementById(id)) {
+            console.log(`Chart container for ${id} not found, creating one`);
             
-            // Find where to insert it
-            const h2 = forecastContent.querySelector('h2');
-            if (h2) {
-                forecastContent.insertBefore(forecastCards, h2.nextSibling);
-            } else {
-                forecastContent.appendChild(forecastCards);
-            }
-        }
-    }
-    
-    // Check for chart containers
-    const chartContainers = [
-        { id: 'temperature-chart', title: 'Temperature Forecast', icon: 'fas fa-temperature-high' },
-        { id: 'precipitation-chart', title: 'Precipitation Forecast', icon: 'fas fa-cloud-rain' },
-        { id: 'wind-chart', title: 'Wind Speed Forecast', icon: 'fas fa-wind' }
-    ];
-    
-    let forecastCharts = document.querySelector('.forecast-charts');
-    if (!forecastCharts) {
-        console.warn('Forecast charts container not found, creating one');
-        const forecastContent = document.querySelector('.forecast-content');
-        if (forecastContent) {
-            forecastCharts = document.createElement('div');
-            forecastCharts.className = 'forecast-charts';
-            forecastContent.appendChild(forecastCharts);
-        }
-    }
-    
-    if (forecastCharts) {
-        chartContainers.forEach(chart => {
-            if (!document.getElementById(chart.id)) {
-                console.warn(`Chart container for ${chart.id} not found, creating one`);
+            // Find the forecast container
+            const forecastContainer = document.querySelector('.forecast-container') || 
+                                     document.querySelector('.forecast-section') || 
+                                     document.querySelector('main');
+            
+            if (forecastContainer) {
+                // Create a container for the chart
                 const chartContainer = document.createElement('div');
                 chartContainer.className = 'chart-container';
-                chartContainer.innerHTML = `
-                    <h3><i class="${chart.icon}"></i> ${chart.title}</h3>
-                    <canvas id="${chart.id}"></canvas>
-                `;
-                forecastCharts.appendChild(chartContainer);
-            }
-        });
-    }
-    
-    // Check for weather alerts container
-    let alertsContainer = document.getElementById('weather-alerts-container');
-    if (!alertsContainer) {
-        console.warn('Weather alerts container not found, creating one');
-        const alertsSection = document.querySelector('.weather-alerts');
-        if (alertsSection) {
-            alertsContainer = document.createElement('div');
-            alertsContainer.id = 'weather-alerts-container';
-            alertsSection.appendChild(alertsContainer);
-        } else {
-            // Create the entire section if it doesn't exist
-            const mainContent = document.querySelector('.container');
-            if (mainContent) {
-                const alertsSection = document.createElement('section');
-                alertsSection.className = 'weather-alerts';
-                alertsSection.innerHTML = `
-                    <h2><i class="fas fa-exclamation-triangle"></i> Weather Alerts</h2>
-                `;
-                alertsContainer = document.createElement('div');
-                alertsContainer.id = 'weather-alerts-container';
-                alertsSection.appendChild(alertsContainer);
                 
-                // Insert before footer if it exists
-                const footer = document.querySelector('footer');
-                if (footer) {
-                    mainContent.insertBefore(alertsSection, footer);
-                } else {
-                    mainContent.appendChild(alertsSection);
-                }
+                // Create the canvas element
+                const canvas = document.createElement('canvas');
+                canvas.id = id;
+                
+                // Add the canvas to the container
+                chartContainer.appendChild(canvas);
+                
+                // Add the container to the forecast container
+                forecastContainer.appendChild(chartContainer);
+            } else {
+                console.warn('Could not find a suitable container for charts');
             }
+        }
+    });
+    
+    // Ensure weather alerts container exists
+    if (!document.querySelector('.weather-alerts')) {
+        console.log('Weather alerts container not found, creating one');
+        
+        // Find the forecast container
+        const forecastContainer = document.querySelector('.forecast-container') || 
+                                 document.querySelector('.forecast-section') || 
+                                 document.querySelector('main');
+        
+        if (forecastContainer) {
+            // Create the alerts container
+            const alertsContainer = document.createElement('div');
+            alertsContainer.className = 'weather-alerts';
+            
+            // Add the container to the forecast container
+            forecastContainer.appendChild(alertsContainer);
         }
     }
 }
+
+// Make sure the weatherApp object exists
+if (!window.weatherApp) {
+    window.weatherApp = {};
+}
+
+// Add our functions to the weatherApp object
+window.weatherApp.ensureUIElementsExist = ensureUIElementsExist;
 
 // Function to add refresh button
 function addRefreshButton(fetchCallback) {

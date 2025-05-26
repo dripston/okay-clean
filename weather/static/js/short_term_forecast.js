@@ -403,46 +403,139 @@ window.forecastData = {
 
 // Find the section where you're fetching forecast data and update it:
 
-// Change this:
-async function fetchForecastData() {
-    console.log('Fetching forecast data...');
-    try {
-        // Try the primary endpoint first
-        const response = await fetch('/api/forecast/short-term');
-        console.log('Response status:', response.status);
-        
-        if (!response.ok) {
-            // If primary endpoint fails, try the fallback endpoint
-            const fallbackResponse = await fetch('/api/short-term-forecast');
-            
-            if (!fallbackResponse.ok) {
-                throw new Error(`HTTP error! Status: ${fallbackResponse.status}`);
-            }
-            return await fallbackResponse.json();
-        }
-        
-        return await response.json();
-    } catch (error) {
-        console.error('Error fetching forecast data:', error);
-        throw error;
-    }
+// Short-term forecast handling
+
+// Initialize variables at the top of the file
+let lastSuccessfulFetch = null;
+let retryCount = 3;
+let retryDelay = 2000; // 2 seconds
+
+// Main initialization function
+function initShortTermForecast() {
+    console.log('Initializing short-term forecast...');
+    
+    // Ensure we have the UI elements we need
+    window.weatherApp.ensureUIElementsExist();
+    
+    // Fetch forecast data with retry mechanism
+    fetchForecastDataWithRetry(retryCount);
+    
+    // Set up periodic updates
+    setInterval(() => {
+        fetchForecastDataWithRetry(retryCount);
+    }, 30 * 60 * 1000); // Update every 30 minutes
 }
 
-// To this (with proper path handling):
-async function fetchForecastData() {
+// Function to fetch forecast data with retry
+function fetchForecastDataWithRetry(attemptsLeft) {
     console.log('Fetching forecast data...');
     
-    // Find where you're using lastSuccessfulFetch and add initialization
+    // Define base URL - empty for local development, full URL for production
+    const baseUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+        ? '' 
+        : window.location.origin;
     
-    // Add this at the beginning of your file or in the initialization section:
-    let lastSuccessfulFetch = null;
-    
-    // Then make sure you're setting it when a fetch succeeds:
-    try {
-        const forecastData = await fetchForecastData();
-        lastSuccessfulFetch = new Date();
-        // rest of your code...
-    } catch (error) {
-        // error handling...
-    }
+    // Try the primary endpoint
+    fetch(`${baseUrl}/api/forecast/short-term`)
+        .then(response => {
+            console.log('Response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Success! Update the UI
+            lastSuccessfulFetch = new Date();
+            window.weatherApp.updateForecastUI(data);
+        })
+        .catch(error => {
+            console.log('Error fetching forecast data:', error);
+            
+            // Try the fallback endpoint
+            fetch(`${baseUrl}/api/short-term-forecast`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Success with fallback! Update the UI
+                    lastSuccessfulFetch = new Date();
+                    window.weatherApp.updateForecastUI(data);
+                })
+                .catch(fallbackError => {
+                    // Both endpoints failed
+                    if (attemptsLeft > 0) {
+                        console.log(`Retrying... (${attemptsLeft} attempts left)`);
+                        setTimeout(() => {
+                            fetchForecastDataWithRetry(attemptsLeft - 1);
+                        }, retryDelay);
+                    } else {
+                        // All retries failed, load fallback data
+                        console.log('Loading fallback forecast data...');
+                        loadFallbackData();
+                    }
+                });
+        });
 }
+
+// Function to load fallback data
+function loadFallbackData() {
+    // Create fallback data
+    const fallbackData = {
+        forecast: Array.from({ length: 7 }, (_, i) => {
+            const date = new Date();
+            date.setDate(date.getDate() + i);
+            return {
+                date: date.toISOString().split('T')[0],
+                tavg: 25 + Math.random() * 5,
+                tmin: 20 + Math.random() * 3,
+                tmax: 28 + Math.random() * 5,
+                prcp: Math.random() * 10,
+                wspd: 5 + Math.random() * 10,
+                pres: 1010 + Math.random() * 10,
+                humidity: 60 + Math.random() * 20,
+                condition: ['Sunny', 'Partly Cloudy', 'Cloudy', 'Light Rain', 'Rain'][Math.floor(Math.random() * 5)]
+            };
+        })
+    };
+    
+    // Update the UI with fallback data
+    window.weatherApp.updateForecastUI(fallbackData);
+    
+    // Add a notice about using fallback data - with proper error handling
+    try {
+        const forecastContainer = document.querySelector('.forecast-container');
+        if (forecastContainer) {
+            const noticeElement = document.createElement('div');
+            noticeElement.className = 'fallback-notice';
+            noticeElement.innerHTML = '<p>⚠️ Using fallback data. Real forecast unavailable.</p>';
+            noticeElement.style.cssText = 'background-color: #fff3cd; color: #856404; padding: 10px; margin: 10px 0; border-radius: 5px; text-align: center;';
+            
+            // Use appendChild instead of prepend to avoid errors
+            forecastContainer.appendChild(noticeElement);
+        }
+    } catch (e) {
+        console.warn('Could not add fallback notice:', e);
+    }
+    
+    return fallbackData;
+}
+
+// Initialize when the DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    // Make sure the weatherApp object exists
+    if (!window.weatherApp) {
+        window.weatherApp = {};
+    }
+    
+    // Add our functions to the weatherApp object
+    window.weatherApp.initShortTermForecast = initShortTermForecast;
+    window.weatherApp.fetchForecastDataWithRetry = fetchForecastDataWithRetry;
+    window.weatherApp.loadFallbackData = loadFallbackData;
+    
+    // Initialize the forecast
+    initShortTermForecast();
+});
