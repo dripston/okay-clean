@@ -3,160 +3,221 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Namma Weather AI - Bangalore Weather Prediction</title>
+    <title>Namma Weather - Bangalore Weather Forecast</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Add Three.js for 3D effects -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Add GSAP for animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/ScrollTrigger.min.js"></script>
 </head>
 <body>
-    <div class="container">
-        <header>
+    <!-- Animated background -->
+    <div class="animated-background">
+        <canvas id="weather-canvas"></canvas>
+    </div>
+
+    <!-- Floating particles -->
+    <div class="particles-container">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+    </div>
+
+    <header>
+        <div class="container">
             <div class="logo">
-                <h1>Namma Weather AI</h1>
+                <h1><i class="fas fa-cloud-sun-rain"></i> Namma Weather</h1>
             </div>
             <nav class="main-nav">
                 <ul>
-                    <li><a href="{{ url_for('index') }}" class="active">Home</a></li>
-                    <li><a href="{{ url_for('short_term_forecast') }}">7-Day Forecast</a></li>
-                    <li><a href="{{ url_for('long_term.long_term_forecast') }}">6-Month Forecast</a></li>
-                    <li><a href="{{ url_for('about') }}">About</a></li>
+                    <li><a href="/" class="active">Home</a></li>
+                    <li><a href="/short-term-forecast">Short-term Forecast</a></li>
+                    <li><a href="/forecast">Long-term Forecast</a></li>
+                    <li><a href="/about">About</a></li>
                 </ul>
             </nav>
-        </header>
+        </div>
+    </header>
 
+    <main>
         <section class="hero">
-            <div class="hero-content">
-                <h1>Intelligent Weather Forecasting for Bangalore</h1>
-                <p>Powered by advanced AI models for accurate short-term and long-term predictions</p>
-                <a href="{{ url_for('short_term_forecast') }}" class="btn-primary">Get Started</a>
-            </div>
-            <div class="hero-image">
-                <img src="{{ url_for('static', filename='images/bangalore-weather.png') }}" alt="Bangalore Weather">
-            </div>
-        </section>
-
-        <section class="features" id="features">
-            <h2>Our Weather Prediction Features</h2>
-            <div class="feature-boxes">
-                <div class="feature-box">
-                    <div class="icon">
-                        <i class="fas fa-cloud-sun"></i>
+            <div class="container">
+                <div class="hero-content">
+                    <h1 class="animated-title">Bangalore Weather <span class="highlight">Forecast</span></h1>
+                    <p class="hero-description">Get accurate weather predictions powered by advanced machine learning models. Plan your day with confidence using our precise short-term and long-term forecasts.</p>
+                    <div class="hero-buttons">
+                        <a href="/short-term-forecast" class="btn-primary">
+                            <span class="btn-text">7-Day Forecast</span>
+                            <span class="btn-icon"><i class="fas fa-arrow-right"></i></span>
+                        </a>
+                        <a href="/forecast" class="btn-secondary">
+                            <span class="btn-text">6-Month Prediction</span>
+                            <span class="btn-icon"><i class="fas fa-chart-line"></i></span>
+                        </a>
                     </div>
-                    <h3>Short-Term Forecast</h3>
-                    <p>Accurate 7-day weather predictions using our Bayesian Neural Network model</p>
                 </div>
-                <div class="feature-box">
-                    <div class="icon">
-                        <i class="fas fa-calendar-alt"></i>
+                <div class="hero-image">
+                    <div class="weather-card">
+                        <div class="weather-card-inner">
+                            <div class="weather-icon">
+                                <i class="fas fa-sun"></i>
+                            </div>
+                            <div class="weather-info">
+                                <h2>Today in Bangalore</h2>
+                                <div class="temperature">
+                                    <span class="temp-value">28°</span>
+                                    <span class="temp-unit">C</span>
+                                </div>
+                                <div class="condition">Partly Cloudy</div>
+                                <div class="weather-details">
+                                    <div class="detail">
+                                        <i class="fas fa-tint"></i>
+                                        <span>45%</span>
+                                    </div>
+                                    <div class="detail">
+                                        <i class="fas fa-wind"></i>
+                                        <span>8 km/h</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <h3>Long-Term Forecast</h3>
-                    <p>Six-month climate outlook powered by our advanced ensemble prediction system</p>
-                </div>
-                <div class="feature-box">
-                    <div class="icon">
-                        <i class="fas fa-bolt"></i>
-                    </div>
-                    <h3>Real-Time Updates</h3>
-                    <p>Current weather conditions with hourly updates from reliable data sources</p>
-                </div>
-                <div class="feature-box">
-                    <div class="icon">
-                        <i class="fas fa-chart-line"></i>
-                    </div>
-                    <h3>AI-Powered Insights</h3>
-                    <p>Weather trends and patterns analyzed using our custom physics-based neural networks</p>
-                </div>
-            </div>
-        </section>
-
-        <section class="about" id="about">
-            <h2>About Namma Weather AI</h2>
-            <div class="about-content">
-                <div class="about-text">
-                    <p>Namma Weather AI is a cutting-edge weather prediction system specifically designed for Bangalore. Our system combines multiple AI models including Bayesian Neural Networks, Physics-based Neural Networks, and Ensemble models to provide highly accurate forecasts.</p>
-                    <p>We use historical weather data, real-time observations, and advanced machine learning techniques to deliver reliable predictions that help you plan your activities with confidence.</p>
                 </div>
             </div>
         </section>
 
-        <footer>
+        <section class="features">
+            <div class="container">
+                <h2 class="section-title">Why Choose Our Forecast</h2>
+                <div class="feature-boxes">
+                    <div class="feature-box" data-delay="0">
+                        <div class="icon">
+                            <i class="fas fa-brain"></i>
+                        </div>
+                        <h3>AI-Powered Predictions</h3>
+                        <p>Our machine learning models analyze historical data to provide highly accurate weather forecasts.</p>
+                    </div>
+                    <div class="feature-box" data-delay="0.2">
+                        <div class="icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <h3>Long-term Forecasting</h3>
+                        <p>Plan ahead with our 6-month weather predictions for Bangalore and surrounding areas.</p>
+                    </div>
+                    <div class="feature-box" data-delay="0.4">
+                        <div class="icon">
+                            <i class="fas fa-mobile-alt"></i>
+                        </div>
+                        <h3>Mobile Friendly</h3>
+                        <p>Access our weather forecasts on any device with our responsive design.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="weather-insights">
+            <div class="container">
+                <h2 class="section-title">Weather Insights</h2>
+                <div class="insights-container">
+                    <div class="insight-card">
+                        <div class="insight-icon">
+                            <i class="fas fa-cloud-rain"></i>
+                        </div>
+                        <h3>Monsoon Patterns</h3>
+                        <p>Our AI models can predict monsoon patterns with greater accuracy than traditional methods.</p>
+                        <div class="insight-stat">
+                            <div class="stat-value">92%</div>
+                            <div class="stat-label">Accuracy</div>
+                        </div>
+                    </div>
+                    <div class="insight-card">
+                        <div class="insight-icon">
+                            <i class="fas fa-temperature-high"></i>
+                        </div>
+                        <h3>Temperature Trends</h3>
+                        <p>Track temperature patterns and prepare for seasonal changes with our detailed analytics.</p>
+                        <div class="insight-stat">
+                            <div class="stat-value">±0.5°C</div>
+                            <div class="stat-label">Precision</div>
+                        </div>
+                    </div>
+                    <div class="insight-card">
+                        <div class="insight-icon">
+                            <i class="fas fa-calendar-alt"></i>
+                        </div>
+                        <h3>Seasonal Forecasts</h3>
+                        <p>Get ahead of seasonal changes with our long-term predictions for all of Bangalore's seasons.</p>
+                        <div class="insight-stat">
+                            <div class="stat-value">6</div>
+                            <div class="stat-label">Months Ahead</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="cta">
+            <div class="container">
+                <div class="cta-content">
+                    <h2>Ready to experience accurate weather forecasting?</h2>
+                    <p>Check out our detailed 7-day forecast or explore our long-term predictions.</p>
+                    <div class="cta-buttons">
+                        <a href="/short-term-forecast" class="btn-primary">View 7-Day Forecast</a>
+                        <a href="/forecast" class="btn-secondary">Explore 6-Month Prediction</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
             <div class="footer-content">
-                <div class="footer-logo">
-                    <h3>Namma Weather AI</h3>
-                    <p>Intelligent weather forecasting for Bangalore</p>
+                <div class="footer-section">
+                    <h4>Namma Weather</h4>
+                    <p>Advanced weather forecasting for Bangalore powered by machine learning and data science.</p>
                 </div>
-                <div class="footer-links">
+                <div class="footer-section">
                     <h4>Quick Links</h4>
                     <ul>
-                        <li><a href="#about">About</a></li>
-                        <li><a href="#features">Features</a></li>
-                        <li><a href="{{ url_for('short_term_forecast') }}">Forecast</a></li>
+                        <li><a href="/">Home</a></li>
+                        <li><a href="/short-term-forecast">Short-term Forecast</a></li>
+                        <li><a href="/forecast">Long-term Forecast</a></li>
+                        <li><a href="/about">About</a></li>
                     </ul>
                 </div>
-                <div class="footer-contact">
-                    <h4>Contact</h4>
-                    <p>Email: info@nammaweatherai.com</p>
+                <div class="footer-section">
+                    <h4>Connect</h4>
+                    <div class="social-icons">
+                        <a href="#" class="social-icon"><i class="fab fa-twitter"></i></a>
+                        <a href="#" class="social-icon"><i class="fab fa-github"></i></a>
+                        <a href="#" class="social-icon"><i class="fab fa-linkedin"></i></a>
+                    </div>
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; 2023 Namma Weather AI. All rights reserved.</p>
+                <p>&copy; 2023 Namma Weather. All rights reserved.</p>
             </div>
-        </footer>
-    </div>
+        </div>
+    </footer>
 
+    <!-- Add your custom JavaScript -->
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/weather_animation.js') }}"></script>
 </body>
 </html>
-
-<main>
-    <section class="hero-section">
-        <div class="hero-content">
-            <h2>Accurate Weather Forecasts for Bangalore</h2>
-            <p>Get reliable weather predictions powered by advanced AI models</p>
-            
-            <div class="forecast-buttons">
-                <a href="{{ url_for('short_term_forecast') }}" class="btn btn-primary">
-                    <i class="fas fa-cloud-sun"></i> 7-Day Forecast
-                </a>
-                <a href="{{ url_for('long_term.long_term_forecast') }}" class="btn btn-secondary">
-                    <i class="fas fa-calendar-alt"></i> 6-Month Forecast
-                </a>
-            </div>
-        </div>
-        
-        <div class="current-weather-summary">
-            <!-- Current weather summary content -->
-        </div>
-    </section>
-    
-    <div class="feature-boxes">
-        <div class="feature-box">
-            <div class="icon">
-                <i class="fas fa-cloud-sun"></i>
-            </div>
-            <h3>Short-Term Forecast</h3>
-            <p>Accurate 7-day weather predictions using our Bayesian Neural Network model</p>
-        </div>
-        <div class="feature-box">
-            <div class="icon">
-                <i class="fas fa-calendar-alt"></i>
-            </div>
-            <h3>Long-Term Forecast</h3>
-            <p>Six-month climate outlook powered by our advanced ensemble prediction system</p>
-        </div>
-        <div class="feature-box">
-            <div class="icon">
-                <i class="fas fa-bolt"></i>
-            </div>
-            <h3>Real-Time Updates</h3>
-            <p>Current weather conditions with hourly updates from reliable data sources</p>
-        </div>
-        <div class="feature-box">
-            <div class="icon">
-                <i class="fas fa-chart-line"></i>
-            </div>
-            <h3>AI-Powered Insights</h3>
-            <p>Weather trends and patterns analyzed using our custom physics-based neural networks</p>
-        </div>
-    </div>
-</main>

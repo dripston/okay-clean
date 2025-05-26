@@ -13,7 +13,7 @@ import traceback
 # Add this import at the top of your file
 from flask_cors import CORS
 # Import the long_term_bp blueprint
-from models.long_term_prediction import long_term_bp
+from weather.models.long_term_prediction import long_term_bp
 
 # Initialize your Flask app
 app = Flask(__name__)
