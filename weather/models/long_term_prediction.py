@@ -4,6 +4,10 @@ import pandas as pd
 from datetime import datetime, timedelta
 import os
 import matplotlib.pyplot as plt
+from flask import Blueprint, render_template, jsonify, request
+
+# Create the blueprint for long-term forecast routes
+long_term_bp = Blueprint('long_term', __name__)
 
 class LongTermPredictionSystem:
     def __init__(self, prediction_system=None):
@@ -317,6 +321,46 @@ class LongTermPredictionSystem:
             
         except Exception as e:
             print(f"Error creating visualization: {str(e)}")
+
+# Add routes to the blueprint
+@long_term_bp.route('/long-term-forecast')
+def long_term_forecast():
+    """Render the long-term forecast page"""
+    return render_template('long_term_forecast.html')
+
+@long_term_bp.route('/api/forecast/long-term')
+def get_long_term_forecast():
+    """API endpoint to get the long-term forecast data"""
+    try:
+        # Path to the six-month forecast CSV
+        csv_path = os.path.join('d:\\lastone\\weather\\output', 'six_month_forecast.csv')
+        
+        # Check if the file exists
+        if not os.path.exists(csv_path):
+            # Generate a new forecast if the file doesn't exist
+            prediction_system = LongTermPredictionSystem()
+            prediction_system.predict_six_months()
+        
+        # Read the forecast data
+        df = pd.read_csv(csv_path)
+        
+        # Convert to list of dictionaries for JSON response
+        forecast_data = df.to_dict(orient='records')
+        
+        return jsonify({
+            'status': 'success',
+            'data': forecast_data,
+            'metadata': {
+                'generated_at': datetime.now().isoformat(),
+                'forecast_type': 'long-term',
+                'days': len(forecast_data)
+            }
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
 
 # Run this if the file is executed directly
 if __name__ == "__main__":
