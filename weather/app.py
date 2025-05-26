@@ -559,6 +559,175 @@ def get_forecast_status():
             'message': f'Error checking forecast status: {str(e)}'
         }), 500
 
+# Add these imports if they're not already present
+import os
+import pandas as pd
+from flask import jsonify
+from datetime import datetime
+
+# Add this new route to directly serve the CSV data
+@app.route('/api/csv-forecast')
+def get_csv_forecast():
+    """Simple API endpoint that directly reads the CSV file and returns it as JSON"""
+    try:
+        print(f"[{datetime.now()}] API request received for CSV forecast")
+        
+        # Path to the CSV file
+        csv_path = os.path.join('output', 'bangalore_short_term_forecast.csv')
+        
+        # Check if the file exists
+        if not os.path.exists(csv_path):
+            print(f"[{datetime.now()}] CSV file not found at: {csv_path}")
+            return jsonify({
+                'error': 'Forecast data file not found',
+                'forecast': generate_fallback_forecast()
+            }), 404
+        
+        # Read the CSV file
+        df = pd.read_csv(csv_path)
+        
+        # Convert to list of dictionaries for JSON serialization
+        forecast_data = df.to_dict(orient='records')
+        
+        # Map column names to standardized names if needed
+        standardized_forecast = []
+        for day in forecast_data:
+            standardized_day = {
+                'date': day.get('date'),
+                'day': day.get('day'),
+                'condition': day.get('condition'),
+                'tavg': day.get('temp_avg', day.get('tavg')),
+                'tmin': day.get('temp_min', day.get('tmin')),
+                'tmax': day.get('temp_max', day.get('tmax')),
+                'humidity': day.get('humidity'),
+                'wspd': day.get('wind_speed', day.get('wspd')),
+                'pres': day.get('pressure', day.get('pres')),
+                'prcp': day.get('precipitation', day.get('prcp'))
+            }
+            standardized_forecast.append(standardized_day)
+        
+        print(f"[{datetime.now()}] Successfully read CSV with {len(standardized_forecast)} days of forecast")
+        
+        # Return the data as JSON
+        return jsonify({
+            'forecast': standardized_forecast,
+            'source': 'direct-csv',
+            'generated_at': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"[{datetime.now()}] Exception in CSV forecast API: {str(e)}")
+        # Return fallback data
+        return jsonify({
+            'error': str(e),
+            'forecast': generate_fallback_forecast(),
+            'source': 'fallback'
+        })
+
+# Helper function to generate fallback forecast data
+def generate_fallback_forecast():
+    """Generate fallback forecast data when the CSV file is not available"""
+    import random
+    from datetime import datetime, timedelta
+    
+    fallback_data = []
+    start_date = datetime.now()
+    
+    conditions = ['Sunny', 'Partly Cloudy', 'Cloudy', 'Light Rain', 'Rain']
+    days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    
+    for i in range(7):
+        date = start_date + timedelta(days=i)
+        day_name = days[date.weekday()]
+        
+        fallback_data.append({
+            'date': date.strftime('%Y-%m-%d'),
+            'day': day_name,
+            'condition': random.choice(conditions),
+            'tavg': round(25 + random.uniform(-3, 3), 1),
+            'tmin': round(20 + random.uniform(-2, 2), 1),
+            'tmax': round(30 + random.uniform(-2, 2), 1),
+            'humidity': round(65 + random.uniform(-10, 10)),
+            'wspd': round(15 + random.uniform(-10, 10), 1),
+            'pres': round(1010 + random.uniform(-5, 5)),
+            'prcp': round(random.uniform(0, 5), 1)
+        })
+    
+    return fallback_data
+
+@app.route('/api/forecast/status')
+def get_forecast_status():
+    """API endpoint to get the status of the forecast update"""
+    global last_update_time, using_real_data, is_updating
+    
+    try:
+        # If an update is in progress, return that status
+        if is_updating:
+            return jsonify({
+                'status': 'updating',
+                'progress': 50,  # We don't know the exact progress, so use 50%
+                'message': 'Generating new forecast data...'
+            })
+            
+        # Check if the forecast file exists
+        csv_paths = [
+            os.path.join('output', 'bangalore_short_term_forecast.csv'),
+            os.path.join('output', 'six_month_forecast.csv')
+        ]
+        
+        file_exists = False
+        for path in csv_paths:
+            if os.path.exists(path):
+                file_exists = True
+                file_path = path
+                break
+        
+        # If the file exists, check if it's recent
+        if file_exists:
+            file_mod_time = datetime.fromtimestamp(os.path.getmtime(file_path))
+            current_time = datetime.now()
+            file_age_seconds = (current_time - file_mod_time).total_seconds()
+            
+            # If the file was modified in the last 30 seconds, it's fresh
+            if file_age_seconds < 30:
+                return jsonify({
+                    'status': 'ready',
+                    'progress': 100,
+                    'last_updated': file_mod_time.isoformat(),
+                    'message': 'Forecast data is up-to-date'
+                })
+            # If the file is less than 1 hour old, consider it up-to-date
+            elif file_age_seconds < 3600:  # 3600 seconds = 1 hour
+                return jsonify({
+                    'status': 'ready',
+                    'progress': 100,
+                    'last_updated': file_mod_time.isoformat(),
+                    'message': 'Forecast data is up-to-date'
+                })
+            else:
+                # File exists but is old
+                return jsonify({
+                    'status': 'stale',
+                    'progress': 100,
+                    'last_updated': file_mod_time.isoformat(),
+                    'message': 'Forecast data is available but outdated'
+                })
+        else:
+            # No file exists
+            return jsonify({
+                'status': 'unavailable',
+                'progress': 0,
+                'message': 'No forecast data available'
+            })
+            
+    except Exception as e:
+        print(f"[{datetime.now()}] Exception in status endpoint: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'progress': 0,
+            'message': f'Error checking forecast status: {str(e)}'
+        }), 500
+
 if __name__ == '__main__':
     # Make sure output directory exists
     os.makedirs('output', exist_ok=True)

@@ -415,19 +415,42 @@ function initShortTermForecast() {
     console.log('Initializing short-term forecast...');
     
     // Ensure we have the UI elements we need
-    window.weatherApp.ensureUIElementsExist();
+    if (window.weatherApp && typeof window.weatherApp.ensureUIElementsExist === 'function') {
+        window.weatherApp.ensureUIElementsExist();
+    }
     
     // Fetch forecast data with retry mechanism
-    fetchForecastDataWithRetry(retryCount);
+    fetchForecastDataWithRetry(retryCount)
+        .then(data => {
+            if (data) {
+                window.weatherApp.updateForecastUI(data);
+            }
+        })
+        .catch(error => {
+            console.error('Failed to fetch forecast data:', error);
+            loadFallbackData();
+        });
     
     // Set up periodic updates
     setInterval(() => {
-        fetchForecastDataWithRetry(retryCount);
+        fetchForecastDataWithRetry(retryCount)
+            .then(data => {
+                if (data) {
+                    window.weatherApp.updateForecastUI(data);
+                }
+            })
+            .catch(error => {
+                console.error('Failed to fetch forecast data during update:', error);
+                // Only load fallback if we haven't successfully loaded data before
+                if (!lastSuccessfulFetch) {
+                    loadFallbackData();
+                }
+            });
     }, 30 * 60 * 1000); // Update every 30 minutes
 }
 
 // Function to fetch forecast data with retry
-function fetchForecastDataWithRetry(attemptsLeft) {
+async function fetchForecastDataWithRetry(attemptsLeft) {
     console.log('Fetching forecast data...');
     
     // Define base URL - empty for local development, full URL for production
@@ -435,50 +458,38 @@ function fetchForecastDataWithRetry(attemptsLeft) {
         ? '' 
         : window.location.origin;
     
-    // Try the primary endpoint
-    fetch(`${baseUrl}/api/forecast/short-term`)
-        .then(response => {
-            console.log('Response status:', response.status);
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            // Success! Update the UI
-            lastSuccessfulFetch = new Date();
-            window.weatherApp.updateForecastUI(data);
-        })
-        .catch(error => {
-            console.log('Error fetching forecast data:', error);
+    // Define all possible API endpoints to try, with the new CSV endpoint first
+    const endpoints = [
+        `${baseUrl}/api/csv-forecast`,
+        `${baseUrl}/api/forecast/short-term`,
+        `${baseUrl}/api/short-term-forecast`
+    ];
+    
+    let lastError = null;
+    
+    // Try each endpoint
+    for (const endpoint of endpoints) {
+        try {
+            console.log(`Trying endpoint: ${endpoint}`);
+            const response = await fetch(endpoint);
+            console.log(`Response from ${endpoint}: status ${response.status}`);
             
-            // Try the fallback endpoint
-            fetch(`${baseUrl}/api/short-term-forecast`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! Status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    // Success with fallback! Update the UI
-                    lastSuccessfulFetch = new Date();
-                    window.weatherApp.updateForecastUI(data);
-                })
-                .catch(fallbackError => {
-                    // Both endpoints failed
-                    if (attemptsLeft > 0) {
-                        console.log(`Retrying... (${attemptsLeft} attempts left)`);
-                        setTimeout(() => {
-                            fetchForecastDataWithRetry(attemptsLeft - 1);
-                        }, retryDelay);
-                    } else {
-                        // All retries failed, load fallback data
-                        console.log('Loading fallback forecast data...');
-                        loadFallbackData();
-                    }
-                });
-        });
+            if (response.ok) {
+                // Store the successful endpoint for future use
+                window.successfulEndpoint = endpoint;
+                lastSuccessfulFetch = new Date();
+                const data = await response.json();
+                console.log('Forecast data received:', data);
+                return data;
+            }
+        } catch (error) {
+            console.log(`Error with endpoint ${endpoint}:`, error);
+            lastError = error;
+        }
+    }
+    
+    // If we get here, all endpoints failed
+    throw lastError || new Error('All API endpoints failed');
 }
 
 // Function to load fallback data
