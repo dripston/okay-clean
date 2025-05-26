@@ -486,6 +486,10 @@ def get_short_term_forecast():
             'is_real_data': False
         }), 500
 
+# Find this section in your app.py file
+# Around line 658 where the error is occurring
+
+# Change this:
 @app.route('/api/forecast/status')
 def get_forecast_status():
     """API endpoint to get the status of the forecast update"""
