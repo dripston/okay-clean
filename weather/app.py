@@ -12,8 +12,29 @@ import traceback
 
 # Add this import at the top of your file
 from flask_cors import CORS
-# Import the long_term_bp blueprint
-from weather.models.long_term_prediction import long_term_bp
+
+# Try both import styles to work in both local and Render environments
+try:
+    # Try the local import style first
+    from models.long_term_prediction import long_term_bp
+    print(f"[{datetime.now()}] Successfully imported long_term_bp using local import path")
+except ModuleNotFoundError:
+    try:
+        # If that fails, try the package-style import
+        from weather.models.long_term_prediction import long_term_bp
+        print(f"[{datetime.now()}] Successfully imported long_term_bp using package import path")
+    except ModuleNotFoundError:
+        print(f"[{datetime.now()}] ERROR: Could not import long_term_bp using either import path")
+        # Create a fallback blueprint if both imports fail
+        from flask import Blueprint
+        long_term_bp = Blueprint('long_term', __name__)
+        
+        @long_term_bp.route('/api/forecast/long-term')
+        def get_long_term_forecast_fallback():
+            return jsonify({
+                'error': 'Long-term forecast module could not be loaded',
+                'message': 'The long-term prediction model is currently unavailable.'
+            }), 503
 
 # Initialize your Flask app
 app = Flask(__name__)
@@ -532,3 +553,133 @@ if __name__ == '__main__':
     print(f"[{datetime.now()}] Current working directory: {os.getcwd()}")
     print(f"[{datetime.now()}] Python executable: {sys.executable}")
     app.run(debug=True)
+
+# 3. Add a current-weather API endpoint to your Flask app:
+@app.route('/api/current-weather')
+def get_current_weather():
+    """API endpoint to get the current weather data"""
+    try:
+        print(f"[{datetime.now()}] API request received for current weather")
+        
+        # Check if we have forecast data
+        csv_paths = [
+            os.path.join('output', 'bangalore_short_term_forecast.csv'),
+            os.path.join('output', 'six_month_forecast.csv')
+        ]
+        
+        # Find the first available forecast file
+        csv_path = None
+        for path in csv_paths:
+            if os.path.exists(path):
+                csv_path = path
+                print(f"[{datetime.now()}] Found forecast file at: {csv_path}")
+                break
+        
+        if csv_path:
+            # Read the CSV file
+            df = pd.read_csv(csv_path)
+            
+            # Get the first row (current day)
+            if len(df) > 0:
+                current_data = df.iloc[0].to_dict()
+                
+                # Map column names if needed
+                column_mapping = {
+                    'temp_avg': 'temperature',
+                    'tavg': 'temperature',
+                    'temp_min': 'min_temperature',
+                    'tmin': 'min_temperature',
+                    'temp_max': 'max_temperature',
+                    'tmax': 'max_temperature',
+                    'prcp': 'precipitation',
+                    'wspd': 'wind_speed',
+                    'pres': 'pressure'
+                }
+                
+                # Create a new dictionary with standardized keys
+                weather_data = {}
+                for old_key, value in current_data.items():
+                    # Map the key if it's in our mapping
+                    new_key = column_mapping.get(old_key, old_key)
+                    weather_data[new_key] = value
+                
+                # Make sure we have a condition
+                if 'condition' not in weather_data and 'precipitation' in weather_data:
+                    prcp = weather_data.get('precipitation', 0)
+                    if prcp >= 10:
+                        weather_data['condition'] = 'Heavy Rain'
+                    elif prcp >= 5:
+                        weather_data['condition'] = 'Rain'
+                    elif prcp > 0:
+                        weather_data['condition'] = 'Light Rain'
+                    else:
+                        weather_data['condition'] = 'Clear'
+                
+                return jsonify(weather_data)
+            
+        # If we get here, we don't have data
+        return jsonify({
+            'error': 'Current weather data not available',
+            'temperature': 28,
+            'condition': 'Partly Cloudy',
+            'humidity': 65,
+            'wind_speed': 12,
+            'pressure': 1008
+        })
+        
+    except Exception as e:
+        print(f"[{datetime.now()}] Exception in current weather API: {str(e)}")
+        # Return fallback data
+        return jsonify({
+            'error': str(e),
+            'temperature': 28,
+            'condition': 'Partly Cloudy',
+            'humidity': 65,
+            'wind_speed': 12,
+            'pressure': 1008
+        })
+
+# Add this missing function that's referenced in your code
+is_updating = False
+
+def update_forecast_now():
+    """Update the forecast immediately"""
+    global is_updating, last_update_time, using_real_data
+    
+    try:
+        is_updating = True
+        print(f"[{datetime.now()}] Manually triggered forecast update...")
+        
+        # Use the same Python interpreter that's running this script
+        python_executable = sys.executable
+        
+        # Run the prediction script as a subprocess
+        result = subprocess.run([python_executable, "-m", "models.main_prediction"], 
+                               capture_output=True, text=True)
+        
+        print(f"[{datetime.now()}] Subprocess return code: {result.returncode}")
+        print(f"[{datetime.now()}] Subprocess stdout: {result.stdout}")
+        print(f"[{datetime.now()}] Subprocess stderr: {result.stderr}")
+        
+        if result.returncode == 0:
+            last_update_time = datetime.now()
+            using_real_data = True
+            print(f"[{last_update_time}] Forecast updated successfully with real data")
+            
+            # Check if the output file was actually created
+            csv_path = os.path.join('output', 'bangalore_short_term_forecast.csv')
+            if os.path.exists(csv_path):
+                print(f"[{datetime.now()}] Output file exists at: {csv_path}")
+            else:
+                print(f"[{datetime.now()}] WARNING: Output file does not exist despite successful return code")
+                using_real_data = False
+        else:
+            print(f"[{datetime.now()}] Error updating forecast: {result.stderr}")
+            using_real_data = False
+            
+    except Exception as e:
+        print(f"[{datetime.now()}] Exception during manual forecast update: {str(e)}")
+        print(f"[{datetime.now()}] Traceback: {traceback.format_exc()}")
+        using_real_data = False
+    finally:
+        is_updating = False

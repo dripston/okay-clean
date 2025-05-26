@@ -400,3 +400,49 @@ window.forecastData = {
         return forecast;
     }
 };
+
+// Find the section where you're fetching forecast data and update it:
+
+// Change this:
+async function fetchForecastData() {
+    console.log('Fetching forecast data...');
+    try {
+        // Try the primary endpoint first
+        const response = await fetch('/api/forecast/short-term');
+        console.log('Response status:', response.status);
+        
+        if (!response.ok) {
+            // If primary endpoint fails, try the fallback endpoint
+            const fallbackResponse = await fetch('/api/short-term-forecast');
+            
+            if (!fallbackResponse.ok) {
+                throw new Error(`HTTP error! Status: ${fallbackResponse.status}`);
+            }
+            return await fallbackResponse.json();
+        }
+        
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching forecast data:', error);
+        throw error;
+    }
+}
+
+// To this (with proper path handling):
+async function fetchForecastData() {
+    console.log('Fetching forecast data...');
+    
+    // Find where you're using lastSuccessfulFetch and add initialization
+    
+    // Add this at the beginning of your file or in the initialization section:
+    let lastSuccessfulFetch = null;
+    
+    // Then make sure you're setting it when a fetch succeeds:
+    try {
+        const forecastData = await fetchForecastData();
+        lastSuccessfulFetch = new Date();
+        // rest of your code...
+    } catch (error) {
+        // error handling...
+    }
+}
