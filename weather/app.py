@@ -127,7 +127,20 @@ def update_forecast():
         time.sleep(600)  # 600 seconds = 10 minutes
 
 # Start the background update thread when the app starts
+# Find the start_background_tasks function and update it to run the prediction immediately
+
 def start_background_tasks():
+    # Run the prediction script immediately on startup
+    print(f"[{datetime.now()}] Running initial forecast update...")
+    try:
+        # Run the prediction script immediately
+        update_forecast_now()
+        print(f"[{datetime.now()}] Initial forecast update completed")
+    except Exception as e:
+        print(f"[{datetime.now()}] Error during initial forecast update: {str(e)}")
+        print(f"[{datetime.now()}] Traceback: {traceback.format_exc()}")
+    
+    # Then start the background thread for periodic updates
     thread = threading.Thread(target=update_forecast)
     thread.daemon = True  # This ensures the thread will exit when the main program exits
     thread.start()
@@ -553,8 +566,15 @@ if __name__ == '__main__':
     print(f"[{datetime.now()}] Current working directory: {os.getcwd()}")
     print(f"[{datetime.now()}] Python executable: {sys.executable}")
     app.run(debug=True)
+# 
+# 2. Now, let's add a new API endpoint to app.py for fallback data:
+# Add this new route to handle the short-term-forecast API endpoint
+@app.route('/api/short-term-forecast')
+def get_short_term_forecast_alt():
+    """Alternative API endpoint for short-term forecast data"""
+    return get_short_term_forecast()
 
-# 3. Add a current-weather API endpoint to your Flask app:
+# Add this new route to handle the current-weather API endpoint
 @app.route('/api/current-weather')
 def get_current_weather():
     """API endpoint to get the current weather data"""

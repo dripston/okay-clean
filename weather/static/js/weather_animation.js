@@ -1,14 +1,29 @@
 // 3D Earth Animation with Three.js
 document.addEventListener('DOMContentLoaded', function() {
-    // Check if Three.js is available
+    // Check if Three.js is available and properly loaded
     if (typeof THREE === 'undefined') {
-        console.warn('Three.js not loaded, skipping Earth animation');
+        console.error('Three.js not loaded. Please check your script includes.');
+        
+        // Create a fallback element to show something instead of the 3D animation
+        const container = document.querySelector('.animated-background') || document.body;
+        const fallbackElement = document.createElement('div');
+        fallbackElement.style.cssText = 'width: 100%; height: 300px; background: linear-gradient(135deg, #8a2be2, #00e5ff); border-radius: 10px; display: flex; align-items: center; justify-content: center;';
+        fallbackElement.innerHTML = '<h3 style="color: white; text-align: center;">Weather Visualization</h3>';
+        container.appendChild(fallbackElement);
         return;
     }
 
     // Initialize scene
     const canvas = document.getElementById('weather-canvas');
-    if (!canvas) return;
+    if (!canvas) {
+        console.error('Canvas element not found. Creating one.');
+        const container = document.querySelector('.animated-background') || document.body;
+        const newCanvas = document.createElement('canvas');
+        newCanvas.id = 'weather-canvas';
+        newCanvas.style.cssText = 'width: 100%; height: 100%; position: absolute; top: 0; left: 0;';
+        container.appendChild(newCanvas);
+        canvas = newCanvas;
+    }
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
