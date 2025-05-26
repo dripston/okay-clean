@@ -4,8 +4,9 @@ flask-cors==4.0.0
 gunicorn==21.2.0
 
 # Data Processing
-pandas==2.1.0
-numpy==1.25.2
+# Downgraded NumPy to be compatible with TensorFlow
+numpy==1.23.5
+pandas==2.0.3
 joblib==1.3.2
 
 # Weather API and Prediction
@@ -25,7 +26,6 @@ graphviz==0.20.1
 
 # Frontend Dependencies
 # Note: three.js should be included via CDN in your HTML, not as a Python package
-# three.js==0.158.0  <- Removed this line
 
 # Additional Dependencies for 3D Visualization
 pillow==10.0.1  # For image processing
