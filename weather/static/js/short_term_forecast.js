@@ -256,3 +256,40 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// Update the fetchForecastDataWithRetry function to use the API endpoint
+window.forecastData = {
+    fetchForecastDataWithRetry: function(retries = 3) {
+        console.log("Fetching forecast data...");
+        
+        fetch('/api/short-term-forecast')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log("Forecast data received:", data);
+                if (data.forecast) {
+                    window.weatherApp.updateForecastUI(data);
+                } else {
+                    throw new Error("No forecast data in response");
+                }
+            })
+            .catch(error => {
+                console.error("Error fetching forecast data:", error);
+                
+                if (retries > 0) {
+                    console.log(`Retrying... (${retries} attempts left)`);
+                    setTimeout(() => {
+                        this.fetchForecastDataWithRetry(retries - 1);
+                    }, 2000);
+                } else {
+                    // Show error message
+                    document.querySelector('.loading').style.display = 'none';
+                    document.getElementById('forecast-error').style.display = 'block';
+                }
+            });
+    }
+};

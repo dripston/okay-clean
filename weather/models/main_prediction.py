@@ -20,12 +20,15 @@ class WeatherPredictionSystem:
             }
         }
         
+        # Use relative paths instead of absolute Windows paths
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        self.output_dir = os.path.join(base_dir, "output")
+        self.models_dir = os.path.join(base_dir, "models", "trained")
+        
         # Create output directory
-        self.output_dir = "d:\\lastone\\weather\\output"
         os.makedirs(self.output_dir, exist_ok=True)
         
         # Initialize models directory
-        self.models_dir = "d:\\lastone\\weather\\models\\trained"
         os.makedirs(self.models_dir, exist_ok=True)
         
         # Placeholder for models (will be created during training)

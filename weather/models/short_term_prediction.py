@@ -18,10 +18,11 @@ class ShortTermPredictionSystem:
         self.prediction_system = prediction_system
         self.cities = prediction_system.cities
       
-        # Add initialization for directories and other components
-        self.data_dir = "d:\\lastone\\weather\\data"
-        self.output_dir = "d:\\lastone\\weather\\output"
-        self.models_dir = "d:\\lastone\\weather\\models\\trained"
+        # Use relative paths instead of absolute Windows paths
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        self.data_dir = os.path.join(base_dir, "data")
+        self.output_dir = os.path.join(base_dir, "output")
+        self.models_dir = os.path.join(base_dir, "models", "trained")
         
         # Create necessary directories if they don't exist
         os.makedirs(self.data_dir, exist_ok=True)
@@ -789,7 +790,6 @@ class ShortTermPredictionSystem:
         
         return forecast
     
-    # Modify the save_forecast_to_csv method to ensure it properly saves the data
     def save_forecast_to_csv(self, city_name, forecast, fallback=False):
         """Save the forecast to a CSV file"""
         try:
@@ -818,8 +818,18 @@ class ShortTermPredictionSystem:
             df = pd.DataFrame(forecast_data)
             
             # Save to CSV
-            csv_path = os.path.join(self.output_dir, f"{city_name.lower()}_short_term_forecast.csv")
-            df.to_csv(csv_path, index=False)
+            try:
+                # Try to save to the output directory
+                csv_path = os.path.join(self.output_dir, f"{city_name.lower()}_short_term_forecast.csv")
+                df.to_csv(csv_path, index=False)
+                print(f"Forecast saved to {csv_path}")
+            except PermissionError:
+                # If permission error, try to save to /tmp directory (works on most Linux systems including Render)
+                import tempfile
+                tmp_dir = tempfile.gettempdir()
+                csv_path = os.path.join(tmp_dir, f"{city_name.lower()}_short_term_forecast.csv")
+                df.to_csv(csv_path, index=False)
+                print(f"Forecast saved to temporary location: {csv_path}")
             
             if fallback:
                 print(f"Fallback forecast saved to {csv_path}")
@@ -830,162 +840,12 @@ class ShortTermPredictionSystem:
             print("\nForecast data preview:")
             print(df.head(3).to_string())
             
+            # Return the DataFrame so it can be used directly if file operations fail
+            return df
+            
         except Exception as e:
             print(f"Error saving forecast to CSV: {str(e)}")
             import traceback
             traceback.print_exc()
-
-    # Fix: Properly indent this method to make it part of the ShortTermPredictionSystem class
-    def visualize_forecast(self, city_name, forecast):
-        """Visualize the weather forecast with matplotlib"""
-        try:
-            print(f"\nVisualizing forecast for {city_name}...")
-            
-            # Extract data from forecast
-            dates = [datetime.strptime(day['date'], '%Y-%m-%d') for day in forecast]
-            temp_min = [day['temp_min'] for day in forecast]
-            temp_max = [day['temp_max'] for day in forecast]
-            temp_avg = [day['temp_avg'] for day in forecast]
-            precipitation = [day['precipitation'] for day in forecast]
-            humidity = [day['humidity'] for day in forecast]
-            wind_speed = [day['wind_speed'] for day in forecast]
-            conditions = [day['condition'] for day in forecast]
-            
-            # Create a figure with subplots
-            fig, axs = plt.subplots(3, 1, figsize=(12, 15), gridspec_kw={'height_ratios': [2, 1, 1]})
-            
-            # Plot temperature
-            axs[0].plot(dates, temp_max, 'r-', label='Max Temp')
-            axs[0].plot(dates, temp_min, 'b-', label='Min Temp')
-            axs[0].plot(dates, temp_avg, 'g-', label='Avg Temp')
-            axs[0].fill_between(dates, temp_min, temp_max, alpha=0.2, color='gray')
-            
-            # Add condition labels
-            for i, (date, condition) in enumerate(zip(dates, conditions)):
-                axs[0].annotate(condition, (date, temp_max[i] + 1), 
-                              ha='center', fontsize=9, rotation=45)
-            
-            axs[0].set_title(f'7-Day Weather Forecast for {city_name}')
-            axs[0].set_ylabel('Temperature (°C)')
-            axs[0].legend()
-            axs[0].grid(True, alpha=0.3)
-            
-            # Format x-axis for dates
-            axs[0].xaxis.set_major_formatter(mdates.DateFormatter('%a\n%b %d'))
-            
-            # Plot precipitation
-            bars = axs[1].bar(dates, precipitation, width=0.7, color='skyblue', alpha=0.7)
-            axs[1].set_ylabel('Precipitation (mm)')
-            axs[1].grid(True, alpha=0.3, axis='y')
-            
-            # Add precipitation values above bars
-            for bar, prcp in zip(bars, precipitation):
-                if prcp > 0.5:  # Only show values above 0.5mm
-                    axs[1].text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.3,
-                              f'{prcp}mm', ha='center', fontsize=9)
-            
-            # Plot humidity and wind speed
-            ax_hum = axs[2]
-            ax_wind = ax_hum.twinx()
-            
-            ax_hum.plot(dates, humidity, 'b-', label='Humidity')
-            ax_hum.set_ylabel('Humidity (%)', color='blue')
-            ax_hum.tick_params(axis='y', labelcolor='blue')
-            ax_hum.set_ylim(0, 100)
-            
-            ax_wind.plot(dates, wind_speed, 'r-', label='Wind Speed')
-            ax_wind.set_ylabel('Wind Speed (m/s)', color='red')
-            ax_wind.tick_params(axis='y', labelcolor='red')
-            
-            # Add a legend for both lines
-            lines_hum, labels_hum = ax_hum.get_legend_handles_labels()
-            lines_wind, labels_wind = ax_wind.get_legend_handles_labels()
-            ax_hum.legend(lines_hum + lines_wind, labels_hum + labels_wind, loc='upper right')
-            
-            ax_hum.grid(True, alpha=0.3)
-            
-            # Format x-axis for dates on all subplots
-            for ax in axs[1:]:
-                ax.xaxis.set_major_formatter(mdates.DateFormatter('%a\n%b %d'))
-            
-            plt.tight_layout()
-            
-            # Save the figure
-            forecast_image_path = os.path.join(self.output_dir, f"{city_name.lower()}_forecast.png")
-            plt.savefig(forecast_image_path, dpi=100)
-            plt.close()
-            
-            print(f"Forecast visualization saved to {forecast_image_path}")
-            
-        except Exception as e:
-            print(f"Error visualizing forecast: {str(e)}")
-            import traceback
-            traceback.print_exc()
-
-    def generate_forecast(self, city_name, combined_data, days=7):
-        """Generate a forecast based on historical patterns and recent trends"""
-        # Extract recent wind patterns to detect gusty conditions
-        recent_winds = combined_data.tail(3)['wspd'].values
-        wind_std = np.std(recent_winds)  # Standard deviation of recent winds
-        is_gusty = wind_std > 5.0  # Consider winds gusty if std dev is high
-        
-        for i in range(1, days+1):
-            date = datetime.now() + timedelta(days=i)
-            
-            # Add some random variation
-            tmax_var = avg_tmax + (random.random() * 4 - 2)  # ±2°C variation
-            tmin_var = avg_tmin + (random.random() * 3 - 1.5)  # ±1.5°C variation
-            tavg_var = (tmax_var + tmin_var) / 2
-            
-            # Ensure tmin <= tavg <= tmax
-            tmin_var = min(tmin_var, tavg_var)
-            tmax_var = max(tmax_var, tavg_var)
-            
-            # Precipitation with some randomness
-            prcp_var = max(0, avg_prcp * (random.random() * 2))
-            
-            # Improved wind prediction that accounts for gusty patterns
-            if is_gusty:
-                # If recent winds were gusty, continue the pattern with higher variation
-                base_wind = avg_wspd + (i % 2) * 5  # Alternating pattern for gustiness
-                wind_variation = random.random() * 8 - 4  # Wider variation (±4 m/s)
-            else:
-                # Normal wind patterns
-                base_wind = avg_wspd
-                wind_variation = random.random() * 6 - 3  # Standard variation (±3 m/s)
-                
-            wind_speed_var = max(0, min(40, base_wind + wind_variation))
-            
-            # Determine condition based on precipitation
-            if prcp_var < 0.1:
-                condition_index = 0  # Sunny
-            elif prcp_var < 1:
-                condition_index = 1  # Partly Cloudy
-            elif prcp_var < 3:
-                condition_index = 2  # Cloudy
-            elif prcp_var < 8:
-                condition_index = 3  # Light Rain
-            elif prcp_var < 15:
-                condition_index = 4  # Rain
-            else:
-                condition_index = 5  # Thunderstorm
-            
-            # Create forecast entry
-            forecast.append({
-                "date": date.strftime("%Y-%m-%d"),
-                "day": date.strftime("%A"),
-                "condition": conditions[condition_index]["condition"],
-                "icon": conditions[condition_index]["icon"],
-                "temp_avg": round(tavg_var, 1),
-                "temp_min": round(tmin_var, 1),
-                "temp_max": round(tmax_var, 1),
-                "humidity": round(avg_humidity + (random.random() * 10 - 5)),
-                "wind_speed": round(wind_speed_var, 1),  # Fixed wind speed logic
-                "pressure": round(avg_pres + (random.random() * 4 - 2)),
-                "precipitation": round(prcp_var, 1)
-            })
-        
-        # Save this fallback forecast to CSV
-        self.save_forecast_to_csv(city_name, forecast, fallback=True)
-        
-        return forecast
+            # Return the DataFrame anyway so it can be used directly
+            return pd.DataFrame(forecast_data) if 'forecast_data' in locals() else None
