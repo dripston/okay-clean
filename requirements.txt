@@ -23,11 +23,9 @@ python-dateutil==2.8.2
 tqdm==4.66.1
 graphviz==0.20.1
 
-# Deep Learning (for long_term_prediction)
-tensorflow-cpu==2.15.0
-
 # Frontend Dependencies
-three.js==0.158.0
+# Note: three.js should be included via CDN in your HTML, not as a Python package
+# three.js==0.158.0  <- Removed this line
 
 # Additional Dependencies for 3D Visualization
 pillow==10.0.1  # For image processing
