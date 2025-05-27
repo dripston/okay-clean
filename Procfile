@@ -1,1 +1,1 @@
-web: bash start.sh
+web: cd weather && gunicorn app:app
